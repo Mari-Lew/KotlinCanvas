@@ -17,6 +17,9 @@ class DrawingView(context: Context, attribs: AttributeSet): View(context, attrib
     private var mCanvasPaint: Paint? = null
     private var canvas: Canvas? = null
 
+    //make the line persist on the screen
+    private val mPaths = ArrayList<CustomPath>()
+
     private var mBrushSize: Float = 0.toFloat()
     private var color = Color.BLACK
 
@@ -51,6 +54,14 @@ class DrawingView(context: Context, attribs: AttributeSet): View(context, attrib
         super.onDraw(drawCanvas)
         drawCanvas.drawBitmap(mCanvasBitmap!!,0f,0f,mCanvasPaint)
 
+
+        for(path in mPaths)
+        {
+            mDrawPaint!!.strokeWidth = path.brushThickness
+            mDrawPaint!!.color = path.color
+            drawCanvas.drawPath(path, mDrawPaint!!)
+        }
+
         if(!mDrawPath!!.isEmpty)
         {
             mDrawPaint!!.strokeWidth = mDrawPath!!.brushThickness
@@ -82,6 +93,7 @@ class DrawingView(context: Context, attribs: AttributeSet): View(context, attrib
             //Release the touch
                 MotionEvent.ACTION_UP ->
                 {
+                    mPaths.add(mDrawPath!!)
                     mDrawPath = CustomPath(color, mBrushSize)
                 }
             else -> return false
