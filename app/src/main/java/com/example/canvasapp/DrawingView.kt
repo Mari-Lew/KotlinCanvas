@@ -3,6 +3,7 @@ package com.example.canvasapp
 import android.content.Context
 import android.graphics.*
 import android.util.AttributeSet
+import android.util.TypedValue
 import android.view.MotionEvent
 import android.view.View
 
@@ -101,6 +102,18 @@ class DrawingView(context: Context, attribs: AttributeSet): View(context, attrib
         invalidate() //invalidates the whole view
         return true
 
+    }
+
+    fun setBrushSize(newSize: Float)
+    {
+        //want to take screen size into consideration
+        mBrushSize = TypedValue.applyDimension(
+            TypedValue.COMPLEX_UNIT_DIP,
+            newSize,
+            resources.displayMetrics
+            )
+
+        mDrawPaint!!.strokeWidth = mBrushSize
     }
 
     /**
