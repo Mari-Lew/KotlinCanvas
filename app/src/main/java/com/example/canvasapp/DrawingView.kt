@@ -20,6 +20,7 @@ class DrawingView(context: Context, attribs: AttributeSet): View(context, attrib
 
     //make the line persist on the screen
     private val mPaths = ArrayList<CustomPath>()
+    private val undoPaths = ArrayList<CustomPath>()
 
     private var mBrushSize: Float = 0.toFloat()
     private var color = Color.BLACK
@@ -104,6 +105,15 @@ class DrawingView(context: Context, attribs: AttributeSet): View(context, attrib
 
     }
 
+    fun undoAction()
+    {
+        if(mPaths.size > 0)
+        {
+            // receiving removed item and storing it in undoPaths
+            undoPaths.add(mPaths.removeAt(mPaths.size - 1))
+            invalidate()
+        }
+    }
     fun setBrushSize(newSize: Float)
     {
         //want to take screen size into consideration

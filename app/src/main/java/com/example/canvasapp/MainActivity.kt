@@ -4,6 +4,10 @@ import android.Manifest
 import android.app.AlertDialog
 import android.app.Dialog
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
 import android.media.Image
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
@@ -25,6 +29,7 @@ class MainActivity : AppCompatActivity() {
 
     private var drawView: DrawingView? = null
     private var ib_brush: ImageButton? = null;
+    private var ib_undo: ImageButton? = null;
     private var mimageButtonCurPaint: ImageButton? = null;
 
     val openGalleryLauncher : ActivityResultLauncher<Intent> = registerForActivityResult(ActivityResultContracts.StartActivityForResult())
@@ -94,6 +99,11 @@ class MainActivity : AppCompatActivity() {
             showBrushSizeChoiceDialog();
         }
 
+        ib_undo = findViewById(R.id.undoId);
+        ib_undo?.setOnClickListener{
+            drawView?.undoAction()
+        }
+
         val ibGallery : ImageButton = findViewById(R.id.galleryId)
         ibGallery.setOnClickListener {
         requestStoragePermission()
@@ -149,6 +159,12 @@ class MainActivity : AppCompatActivity() {
        }
     }
 
+    private fun isReadStorageAllowed() : Boolean {
+        val result = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)
+
+        return result == PackageManager.PERMISSION_GRANTED
+    }
+
     private fun requestStoragePermission()
     {
         if(ActivityCompat.shouldShowRequestPermissionRationale(
@@ -164,6 +180,27 @@ class MainActivity : AppCompatActivity() {
                 Manifest.permission.WRITE_EXTERNAL_STORAGE
             ))
         }
+    }
+    
+    private fun getBitmapFromView(view: View) : Bitmap {
+    val returnBitmap = Bitmap.createBitmap(view.width,
+        view.height,
+        Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(returnBitmap)
+        val bgDrawable = view.background
+        if(bgDrawable != null)
+        {
+            bgDrawable.draw(canvas)
+        }
+        else
+        {
+            canvas.drawColor(Color.WHITE)
+        }
+
+        view.draw(canvas)
+
+        return returnBitmap
+
     }
 
     private fun showRationaleDialog(
