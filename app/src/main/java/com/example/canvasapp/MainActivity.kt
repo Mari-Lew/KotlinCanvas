@@ -9,11 +9,13 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.media.Image
+import android.media.MediaScannerConnection
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.provider.MediaStore
 import android.view.View
 import android.widget.Button
+import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -24,6 +26,13 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.get
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.ByteArrayOutputStream
+import java.io.File
+import java.io.FileOutputStream
 
 class MainActivity : AppCompatActivity() {
 
@@ -31,6 +40,7 @@ class MainActivity : AppCompatActivity() {
     private var ib_brush: ImageButton? = null;
     private var ib_undo: ImageButton? = null;
     private var mimageButtonCurPaint: ImageButton? = null;
+    var customProgressDialog: Dialog? = null
 
     val openGalleryLauncher : ActivityResultLauncher<Intent> = registerForActivityResult(ActivityResultContracts.StartActivityForResult())
     {
@@ -108,6 +118,19 @@ class MainActivity : AppCompatActivity() {
         ibGallery.setOnClickListener {
         requestStoragePermission()
         }
+        
+        val ib_save: ImageButton = findViewById(R.id.saveButton)
+        ib_save.setOnClickListener{
+            if(isReadStorageAllowed())
+            {
+                showProgressDialog()
+                lifecycleScope.launch{
+                    val flDrawView : FrameLayout = findViewById(R.id.drawingViewContainer)
+                    saveBitmapFile(getBitmapFromView(flDrawView))
+
+                }
+            }
+        }
     }
 
     private fun showBrushSizeChoiceDialog()
@@ -165,6 +188,7 @@ class MainActivity : AppCompatActivity() {
         return result == PackageManager.PERMISSION_GRANTED
     }
 
+
     private fun requestStoragePermission()
     {
         if(ActivityCompat.shouldShowRequestPermissionRationale(
@@ -203,6 +227,8 @@ class MainActivity : AppCompatActivity() {
 
     }
 
+
+
     private fun showRationaleDialog(
         title: String,
         message: String,
@@ -214,5 +240,95 @@ class MainActivity : AppCompatActivity() {
                 dialog.dismiss()
             }
         builder.create().show()
+    }
+
+    //Coroutines
+    private suspend fun saveBitmapFile(mBitmap: Bitmap?): String {
+        var result = "" //where we store image
+        withContext(Dispatchers.IO)
+        {
+            if(mBitmap != null)
+            {
+                try{
+                    val bytes = ByteArrayOutputStream()
+                    mBitmap.compress(Bitmap.CompressFormat.PNG, 90, bytes)
+
+                    val file = File(externalCacheDir?.absoluteFile.toString() + File.separator + "CanvasApp_" + System.currentTimeMillis() / 1000 + ".png")
+                    val fileOutput = FileOutputStream(file)
+                    fileOutput.write(bytes.toByteArray())
+                    fileOutput.close()
+
+                    result = file.absolutePath //where the file is
+
+                    //Let user know where the file is stored
+                    runOnUiThread{
+                        cancelProgressDialog()
+                        if(result.isNotEmpty())
+                        {
+                            Toast.makeText(
+                                this@MainActivity,
+                                "File saved successfully: $result ",
+                                Toast.LENGTH_SHORT
+                            ).show()
+
+                            shareImage(result)
+                        }
+                    }
+                } catch (e:Exception)
+                {
+                    result = ""
+                    e.printStackTrace()
+                }
+            }
+        }
+
+        return result
+    }
+
+    private fun shareImage(result:String){
+
+         MediaScannerConnection.scanFile(
+            this@MainActivity, arrayOf(result), null
+        ) { path, uri ->
+            // share image after it's stored in the storage.
+            val shareIntent = Intent()
+            shareIntent.action = Intent.ACTION_SEND
+             //Extra details so it knows which pile it should use
+            shareIntent.putExtra(
+                Intent.EXTRA_STREAM,
+                uri
+            )
+             shareIntent.type =
+                "image/png"
+            startActivity(
+                Intent.createChooser(
+                    shareIntent,
+                    "Share"
+                )
+            )
+        }
+    }
+
+    private fun showProgressDialog() {
+        customProgressDialog = Dialog(this@MainActivity)
+
+        /*Set the screen content from a layout resource.
+        The resource will be inflated, adding all top-level views to the screen.*/
+        customProgressDialog?.setContentView(R.layout.dialog_custom_progress)
+
+        //Start the dialog and display it on screen.
+        customProgressDialog?.show()
+    }
+
+    /**
+     * This function is used to dismiss the progress dialog if it is visible to user.
+     */
+    private fun cancelProgressDialog() {
+        // does it exist?
+        if (customProgressDialog != null) {
+            //if it is, dismiss it
+            customProgressDialog?.dismiss()
+            customProgressDialog = null
+        }
     }
 }
